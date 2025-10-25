@@ -1,0 +1,12 @@
+# Venv zzz
+.venv/
+venv/
+ENV/
+env/
+
+# Python files
+__pycache__/
+*.pyc
+
+# VS Code
+.vscode/
