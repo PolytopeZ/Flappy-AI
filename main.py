@@ -21,6 +21,8 @@ PIP_SPEED = 3
 COLOR_BG = (32, 32, 32)
 COLOR_PIPE = (0, 255, 0)
 COLOR_WHITE = (255, 255, 255)
+COLOR_ELITE = (0, 102, 204)
+COLOR_GRAY = (160, 160, 160)
 
 BIRD_COUNT = 50
 MUTATION_RATE = 0.08
@@ -85,7 +87,7 @@ def save_best_bird(bird):
 def load_bird(filename=SAVE_FILE):
     data = np.load(filename)
 
-    bird = Bird(100, WIN_HEIGHT // 2, generate_random_color())
+    bird = Bird(100, WIN_HEIGHT // 2)
     bird.brain.w1 = data["w1"]
     bird.brain.b1 = data["b1"]
     bird.brain.w2 = data["w2"]
@@ -97,7 +99,7 @@ def load_bird(filename=SAVE_FILE):
 
 # ******** Classes ********
 class Bird:
-    def __init__(self, x, y, color=(255, 255, 0)):
+    def __init__(self, x, y, color=COLOR_GRAY):
         self.x = x
         self.y = y
         self.tick_count = 0
@@ -170,7 +172,7 @@ class Game:
         self.screen = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
         pygame.display.set_caption("Flappy UwU")
         self.clock = pygame.time.Clock()
-        self.birds = [Bird(100, WIN_HEIGHT // 2, generate_random_color())
+        self.birds = [Bird(100, WIN_HEIGHT // 2)
                       for _ in range(BIRD_COUNT)]
         self.pipes = [Pipe(WIN_WIDTH + i * 300) for i in range(3)]
         self.score = 0
@@ -185,7 +187,7 @@ class Game:
             self.pipes = [Pipe(WIN_WIDTH + i * 300) for i in range(3)]
             self.play_mode = True
         else:
-            self.birds = [Bird(100, WIN_HEIGHT // 2, generate_random_color())
+            self.birds = [Bird(100, WIN_HEIGHT // 2)
                           for _ in range(BIRD_COUNT)]
             self.pipes = [Pipe(WIN_WIDTH + i * 300) for i in range(3)]
             self.play_mode = False
@@ -238,8 +240,8 @@ class Game:
             if bird.alive:
                 bird.draw(self.screen)
 
-        text = self.font.render(
-            f"Score: {self.score}, Gen: {self.generation}", True, COLOR_WHITE)
+        text_str = f"Score: {self.score}, Gen: {self.generation}"
+        text = self.font.render(text_str, True, COLOR_WHITE)
         self.screen.blit(text, (10, 10))
 
         pygame.display.flip()
@@ -259,17 +261,17 @@ class Game:
 
         new_birds = []
         # Keep the elite
-        elite_child = Bird(100, WIN_HEIGHT // 2, generate_random_color())
+        elite_child = Bird(100, WIN_HEIGHT // 2, COLOR_ELITE)
         elite_child.brain = elite.brain.copy()
         new_birds.append(elite_child)
 
         # Fill with children
         while len(new_birds) < BIRD_COUNT:
             if random.random() < 0.1:
-                child = Bird(100, WIN_HEIGHT//2, generate_random_color())
+                child = Bird(100, WIN_HEIGHT//2)
             else:
                 parent = random.choice(parents)
-                child = Bird(100, WIN_HEIGHT // 2, generate_random_color())
+                child = Bird(100, WIN_HEIGHT // 2)
                 child.brain = parent.brain.copy()
                 child.brain.mutate(MUTATION_RATE)
             new_birds.append(child)
