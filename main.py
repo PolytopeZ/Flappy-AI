@@ -4,6 +4,7 @@ import sys
 import time
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 
 # ******** Constants ********
 FPS = 60
@@ -23,6 +24,8 @@ COLOR_WHITE = (255, 255, 255)
 
 BIRD_COUNT = 50
 MUTATION_RATE = 0.08
+
+SAVE_FILE = "best_bird.npz"
 
 
 # ******** Neural Network ********
@@ -67,6 +70,29 @@ class NeuralNetwork:
 # ******** Utils ********
 def generate_random_color():
     return (random.randint(50, 255), random.randint(50, 255), random.randint(50, 255))
+
+
+def save_best_bird(bird):
+    np.savez(SAVE_FILE,
+             w1=bird.brain.w1,
+             b1=bird.brain.b1,
+             w2=bird.brain.w2,
+             b2=bird.brain.b2
+             )
+    print("Goat has been saved")
+
+
+def load_bird(filename=SAVE_FILE):
+    data = np.load(filename)
+
+    bird = Bird(100, WIN_HEIGHT // 2, generate_random_color())
+    bird.brain.w1 = data["w1"]
+    bird.brain.b1 = data["b1"]
+    bird.brain.w2 = data["w2"]
+    bird.brain.b2 = data["b2"]
+
+    print("Goat has been loaded")
+    return bird
 
 
 # ******** Classes ********
@@ -139,7 +165,7 @@ class Pipe:
 
 
 class Game:
-    def __init__(self):
+    def __init__(self, load_best=False):
         pygame.init()
         self.screen = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
         pygame.display.set_caption("Fally UwU")
@@ -150,6 +176,19 @@ class Game:
         self.score = 0
         self.generation = 1
         self.font = pygame.font.SysFont("jetbrainsmononlnfpmedium", 24)
+        self.history_max = []
+        self.history_mean = []
+
+        if load_best and os.path.exists(SAVE_FILE):
+            bird = load_bird()
+            self.birds = [bird]
+            self.pipes = [Pipe(WIN_WIDTH + i * 300) for i in range(3)]
+            self.play_mode = True
+        else:
+            self.birds = [Bird(100, WIN_HEIGHT // 2, generate_random_color())
+                          for _ in range(BIRD_COUNT)]
+            self.pipes = [Pipe(WIN_WIDTH + i * 300) for i in range(3)]
+            self.play_mode = False
 
     def update(self):
         # Searching for the next pipe
@@ -206,9 +245,15 @@ class Game:
         pygame.display.flip()
 
     def evolve(self):
+        # Saving score for graphs
+        scores = [b.score for b in self.birds]
+        self.history_max.append(max(scores))
+        self.history_mean.append(np.mean(scores))
+
         # Sort by fitness
         sorted_birds = sorted(self.birds, key=lambda b: b.score, reverse=True)
         elite = sorted_birds[0]  # the GOAAAAT
+        save_best_bird(elite)
         top_n = max(2, BIRD_COUNT // 5)  # 20%
         parents = sorted_birds[:top_n]
 
@@ -235,6 +280,15 @@ class Game:
         self.score = 0
         self.generation += 1
 
+    def plot_progress(self):
+        plt.plot(self.history_max, label="Max Score")
+        plt.plot(self.history_mean, label="Mean Score")
+        plt.xlabel("Generation")
+        plt.ylabel("Score")
+        plt.title("Flappy UwU AI Progress")
+        plt.legend()
+        plt.show()
+
     def run(self):
         running = True
 
@@ -243,16 +297,18 @@ class Game:
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
+                    running = False
 
             alive_count = self.update()
 
-            if alive_count == 0:
+            if not self.play_mode and alive_count == 0:
                 self.evolve()
-
             self.draw()
+
+        pygame.quit()
+        if not self.play_mode:
+            self.plot_progress()
 
 
 if __name__ == "__main__":
-    Game().run()
+    Game(load_best=True).run()
