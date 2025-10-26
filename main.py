@@ -168,7 +168,7 @@ class Game:
     def __init__(self, load_best=False):
         pygame.init()
         self.screen = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
-        pygame.display.set_caption("Fally UwU")
+        pygame.display.set_caption("Flappy UwU")
         self.clock = pygame.time.Clock()
         self.birds = [Bird(100, WIN_HEIGHT // 2, generate_random_color())
                       for _ in range(BIRD_COUNT)]
@@ -311,4 +311,4 @@ class Game:
 
 
 if __name__ == "__main__":
-    Game(load_best=True).run()
+    Game(load_best=False).run()
