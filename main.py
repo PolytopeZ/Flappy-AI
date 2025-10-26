@@ -13,6 +13,7 @@ WIN_HEIGHT = 800
 
 GRAVITY = 0.25
 JUMP_STRENGTH = -6
+JUMP_COOLDOWN = 20
 
 PIPE_WIDTH = 50
 PIPE_GAP = 150
@@ -106,6 +107,7 @@ class Bird:
         self.vel = 0
         self.radius = 15
         self.alive = True
+        self.jump_cooldown = 0
         self.color = color
         self.score = 0
         self.brain = NeuralNetwork()
@@ -116,6 +118,7 @@ class Bird:
     def update(self):
         self.vel += GRAVITY
         self.y += self.vel
+        self.jump_cooldown = max(0, self.jump_cooldown - 1)
 
         # Check for out of bounds
         if self.y > WIN_HEIGHT or self.y < 0:
@@ -136,8 +139,9 @@ class Bird:
                   (self.y - pipe.y) / WIN_HEIGHT]
 
         output = self.brain.predict(inputs)
-        if output > 0.5:
+        if output > 0.5 and self.jump_cooldown == 0:
             self.jump()
+            self.jump_cooldown = JUMP_COOLDOWN
 
     def draw(self, win):
         pygame.draw.circle(win, self.color, (self.x, self.y), self.radius)
@@ -209,6 +213,7 @@ class Game:
                 bird.think(next_pipe)  # Todo change this
                 bird.update()
 
+                # Reward for being alive
                 bird.score += 0.1
 
                 # Check if collide
@@ -226,7 +231,7 @@ class Game:
         if self.pipes[0].x + PIPE_WIDTH < 0:
             self.pipes.pop(0)
             self.pipes.append(Pipe(WIN_WIDTH + 200))
-            self.score += 1
+            self.score += 2
             for bird in self.birds:
                 bird.score = self.score
 
