@@ -283,12 +283,15 @@ class Game:
         self.generation += 1
 
     def plot_progress(self):
+        plt.style.use("seaborn-v0_8-pastel")
         plt.plot(self.history_max, label="Max Score")
         plt.plot(self.history_mean, label="Mean Score")
         plt.xlabel("Generation")
         plt.ylabel("Score")
         plt.title("Flappy UwU AI Progress")
         plt.legend()
+        plt.grid(True, linestyle="--")
+        plt.tight_layout()
         plt.show()
 
     def run(self):
