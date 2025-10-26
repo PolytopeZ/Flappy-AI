@@ -3,6 +3,7 @@ import random
 import sys
 import time
 import os
+import numpy as np
 
 # ******** Constants ********
 FPS = 60
@@ -20,7 +21,47 @@ COLOR_BG = (32, 32, 32)
 COLOR_PIPE = (0, 255, 0)
 COLOR_WHITE = (255, 255, 255)
 
-BIRD_COUNT = 10
+BIRD_COUNT = 50
+MUTATION_RATE = 0.08
+
+
+# ******** Neural Network ********
+class NeuralNetwork:
+    def __init__(self, input_size=5, hidden_size=6, output_size=1):
+        self.w1 = np.random.randn(hidden_size, input_size)
+        self.b1 = np.random.randn(hidden_size, 1)
+        self.w2 = np.random.randn(output_size, hidden_size)
+        self.b2 = np.random.randn(output_size, 1)
+
+    def predict(self, inputs):
+        # z1 = w1 * x + b1
+        # a1 = tanh(z1)
+        # z2 = w2 * a1 + b2
+        # output = sigmoid(z2)
+        x = np.array(inputs).reshape(-1, 1)
+        z1 = np.dot(self.w1, x) + self.b1
+        a1 = np.tanh(z1)
+        z2 = np.dot(self.w2, a1) + self.b2
+        output = 1 / (1 + np.exp(-z2))  # Sigmoid
+        return output[0, 0]
+
+    def copy(self):
+        nn = NeuralNetwork()
+        nn.w1 = np.copy(self.w1)
+        nn.b1 = np.copy(self.b1)
+        nn.w2 = np.copy(self.w2)
+        nn.b2 = np.copy(self.b2)
+        return nn
+
+    def mutate(self, rate=MUTATION_RATE):
+        def mutate_matrix(mat):
+            mutation_mask = np.random.rand(*mat.shape) < rate
+            mat += mutation_mask * np.random.randn(*mat.shape) * 0.5
+
+        mutate_matrix(self.w1)
+        mutate_matrix(self.b1)
+        mutate_matrix(self.w2)
+        mutate_matrix(self.b2)
 
 
 # ******** Utils ********
@@ -39,6 +80,7 @@ class Bird:
         self.alive = True
         self.color = color
         self.score = 0
+        self.brain = NeuralNetwork()
 
     def jump(self):
         self.vel = JUMP_STRENGTH
@@ -52,10 +94,22 @@ class Bird:
             self.alive = False
 
     def think(self, pipe):
-        # Simple heuristic for now
-        if pipe.x + pipe.width > self.x:
-            if self.y > pipe.y + 10:
-                self.jump()
+        if pipe is None:
+            return
+
+        top_y = (pipe.y - PIPE_GAP // 2) / WIN_HEIGHT
+        bottom_y = (pipe.y + PIPE_GAP // 2) / WIN_HEIGHT
+        center_gap_y = pipe.y / WIN_HEIGHT
+
+        inputs = [self.y / WIN_HEIGHT,
+                  (pipe.x - self.x) / WIN_WIDTH,
+                  self.vel / 10.0,
+                  center_gap_y,
+                  (self.y - pipe.y) / WIN_HEIGHT]
+
+        output = self.brain.predict(inputs)
+        if output > 0.5:
+            self.jump()
 
     def draw(self, win):
         pygame.draw.circle(win, self.color, (self.x, self.y), self.radius)
@@ -113,6 +167,9 @@ class Game:
             if bird.alive:
                 bird.think(next_pipe)  # Todo change this
                 bird.update()
+
+                bird.score += 0.1
+
                 # Check if collide
                 for pipe in self.pipes:
                     if pipe.collide_with(bird):
@@ -148,9 +205,32 @@ class Game:
 
         pygame.display.flip()
 
-    def reset(self):
-        self.birds = [Bird(100, WIN_HEIGHT // 2, generate_random_color())
-                      for _ in range(BIRD_COUNT)]
+    def evolve(self):
+        # Sort by fitness
+        sorted_birds = sorted(self.birds, key=lambda b: b.score, reverse=True)
+        elite = sorted_birds[0]  # the GOAAAAT
+        top_n = max(2, BIRD_COUNT // 5)  # 20%
+        parents = sorted_birds[:top_n]
+
+        new_birds = []
+        # Keep the elite
+        elite_child = Bird(100, WIN_HEIGHT // 2, generate_random_color())
+        elite_child.brain = elite.brain.copy()
+        new_birds.append(elite_child)
+
+        # Fill with children
+        while len(new_birds) < BIRD_COUNT:
+            if random.random() < 0.1:
+                child = Bird(100, WIN_HEIGHT//2, generate_random_color())
+            else:
+                parent = random.choice(parents)
+                child = Bird(100, WIN_HEIGHT // 2, generate_random_color())
+                child.brain = parent.brain.copy()
+                child.brain.mutate(MUTATION_RATE)
+            new_birds.append(child)
+
+        # Reset with new gen
+        self.birds = new_birds
         self.pipes = [Pipe(WIN_WIDTH + i * 300) for i in range(3)]
         self.score = 0
         self.generation += 1
@@ -169,7 +249,7 @@ class Game:
             alive_count = self.update()
 
             if alive_count == 0:
-                self.reset()
+                self.evolve()
 
             self.draw()
 
