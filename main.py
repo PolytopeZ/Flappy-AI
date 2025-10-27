@@ -13,7 +13,7 @@ WIN_HEIGHT = 800
 
 GRAVITY = 0.25
 JUMP_STRENGTH = -6
-JUMP_COOLDOWN = 20
+JUMP_COOLDOWN = 15
 
 PIPE_WIDTH = 50
 PIPE_GAP = 150
@@ -27,6 +27,7 @@ COLOR_GRAY = (160, 160, 160)
 
 BIRD_COUNT = 50
 MUTATION_RATE = 0.08
+CROSSOVER_RATE = 0.7
 
 SAVE_FILE = "best_bird.npz"
 
@@ -68,6 +69,20 @@ class NeuralNetwork:
         mutate_matrix(self.b1)
         mutate_matrix(self.w2)
         mutate_matrix(self.b2)
+
+    def crossover(self, other):
+        child = NeuralNetwork()
+
+        # Utils function that return a mask with random bool
+        def mix(a, b):
+            mask = np.random.rand(*a.shape) < 0.5
+            return np.where(mask, a, b)
+
+        child.w1 = mix(self.w1, other.w1)
+        child.b1 = mix(self.b1, other.b1)
+        child.w2 = mix(self.w2, other.w2)
+        child.b2 = mix(self.b2, other.b2)
+        return child
 
 
 # ******** Utils ********
@@ -273,12 +288,21 @@ class Game:
         # Fill with children
         while len(new_birds) < BIRD_COUNT:
             if random.random() < 0.1:
+                # 10% of new random bird
                 child = Bird(100, WIN_HEIGHT//2)
             else:
-                parent = random.choice(parents)
+                parent1 = random.choice(parents)
+                # Crossover
+                if random.random() < CROSSOVER_RATE:
+                    parent2 = random.choice(parents)
+                    child_brain = parent1.brain.crossover(parent2.brain)
+                else:
+                    child_brain = parent1.brain.copy()
+                # Mutation
+                child_brain.mutate(MUTATION_RATE)
                 child = Bird(100, WIN_HEIGHT // 2)
-                child.brain = parent.brain.copy()
-                child.brain.mutate(MUTATION_RATE)
+                child.brain = child_brain
+
             new_birds.append(child)
 
         # Reset with new gen
