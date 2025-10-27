@@ -8,8 +8,9 @@ import matplotlib.pyplot as plt
 
 # ******** Constants ********
 FPS = 60
-WIN_WIDTH = 600
+WIN_WIDTH = 900  # 600 for the game, 300 for visualization
 WIN_HEIGHT = 800
+GAME_WIDTH = 600
 
 GRAVITY = 0.25
 JUMP_STRENGTH = -6
@@ -148,7 +149,7 @@ class Bird:
         center_gap_y = pipe.y / WIN_HEIGHT
 
         inputs = [self.y / WIN_HEIGHT,
-                  (pipe.x - self.x) / WIN_WIDTH,
+                  (pipe.x - self.x) / GAME_WIDTH,
                   self.vel / 10.0,
                   center_gap_y,
                   (self.y - pipe.y) / WIN_HEIGHT]
@@ -173,6 +174,8 @@ class Pipe:
         self.x -= PIP_SPEED
 
     def draw(self, win):
+        if self.x >= GAME_WIDTH:
+            return
         pygame.draw.rect(win, COLOR_PIPE, (self.x, 0,
                          self.width, self.y - self.gap // 2))
         pygame.draw.rect(win, COLOR_PIPE, (self.x, self.y + self.gap //
@@ -193,7 +196,7 @@ class Game:
         self.clock = pygame.time.Clock()
         self.birds = [Bird(100, WIN_HEIGHT // 2)
                       for _ in range(BIRD_COUNT)]
-        self.pipes = [Pipe(WIN_WIDTH + i * 300) for i in range(3)]
+        self.pipes = [Pipe(GAME_WIDTH + i * 300) for i in range(3)]
         self.score = 0
         self.generation = 1
         self.font = pygame.font.SysFont("jetbrainsmononlnfpmedium", 24)
@@ -203,12 +206,12 @@ class Game:
         if load_best and os.path.exists(SAVE_FILE):
             bird = load_bird()
             self.birds = [bird]
-            self.pipes = [Pipe(WIN_WIDTH + i * 300) for i in range(3)]
+            self.pipes = [Pipe(GAME_WIDTH + i * 300) for i in range(3)]
             self.play_mode = True
         else:
             self.birds = [Bird(100, WIN_HEIGHT // 2)
                           for _ in range(BIRD_COUNT)]
-            self.pipes = [Pipe(WIN_WIDTH + i * 300) for i in range(3)]
+            self.pipes = [Pipe(GAME_WIDTH + i * 300) for i in range(3)]
             self.play_mode = False
 
     def update(self):
@@ -245,7 +248,7 @@ class Game:
         # Add pipes
         if self.pipes[0].x + PIPE_WIDTH < 0:
             self.pipes.pop(0)
-            self.pipes.append(Pipe(WIN_WIDTH + 200))
+            self.pipes.append(Pipe(GAME_WIDTH + 200))
             self.score += 2
             for bird in self.birds:
                 bird.score = self.score
@@ -310,7 +313,7 @@ class Game:
 
         # Reset with new gen
         self.birds = new_birds
-        self.pipes = [Pipe(WIN_WIDTH + i * 300) for i in range(3)]
+        self.pipes = [Pipe(GAME_WIDTH + i * 300) for i in range(3)]
         self.score = 0
         self.generation += 1
 
