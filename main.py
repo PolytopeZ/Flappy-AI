@@ -167,7 +167,7 @@ class Pipe:
         self.x = x
         self.width = PIPE_WIDTH
         self.gap = PIPE_GAP
-        self.y = random.randint(150,  WIN_HEIGHT - 150)
+        self.y = random.randint(200,  WIN_HEIGHT - 200)
 
     def update(self):
         self.x -= PIP_SPEED
