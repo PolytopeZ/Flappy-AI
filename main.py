@@ -291,10 +291,13 @@ class Game:
                 # 10% of new random bird
                 child = Bird(100, WIN_HEIGHT//2)
             else:
-                parent1 = random.choice(parents)
+                # Roulette wheel
+                scores = np.array([b.score for b in parents])
+                proba = scores / scores.sum()
+                parent1 = np.random.choice(parents, p=proba)
+                parent2 = np.random.choice(parents, p=proba)
                 # Crossover
                 if random.random() < CROSSOVER_RATE:
-                    parent2 = random.choice(parents)
                     child_brain = parent1.brain.crossover(parent2.brain)
                 else:
                     child_brain = parent1.brain.copy()
