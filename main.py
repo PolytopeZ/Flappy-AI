@@ -52,6 +52,19 @@ class NeuralNetwork:
         nn.b2 = np.copy(self.b2)
         return nn
 
+    def forward(self, inputs):
+        # z1 = w1 * x + b1
+        # a1 = tanh(z1)
+        # z2 = w2 * a1 + b2
+        # a2 = sigmoid(z2)
+        x = np.array(inputs).reshape(-1, 1)
+        z1 = np.dot(self.w1, x) + self.b1
+        a1 = np.tanh(z1)
+        z2 = np.dot(self.w2, a1) + self.b2
+        a2 = 1 / (1 + np.exp(-z2))  # Sigmoid
+
+        return a2, [x, a1, a2]
+
     def mutate(self, rate=MUTATION_RATE):
         def mutate_matrix(mat):
             mutation_mask = np.random.rand(*mat.shape) < rate
@@ -181,8 +194,6 @@ class Bird:
         if pipe is None:
             return
 
-        top_y = (pipe.y - PIPE_GAP // 2) / WIN_HEIGHT
-        bottom_y = (pipe.y + PIPE_GAP // 2) / WIN_HEIGHT
         center_gap_y = pipe.y / WIN_HEIGHT
 
         inputs = [self.y / WIN_HEIGHT,
@@ -191,20 +202,11 @@ class Bird:
                   center_gap_y,
                   (self.y - pipe.y) / WIN_HEIGHT]
 
-        # z1 = w1 * x + b1
-        # a1 = tanh(z1)
-        # z2 = w2 * a1 + b2
-        # a2 = sigmoid(z2)
-        x = np.array(inputs).reshape(-1, 1)
-        z1 = np.dot(self.brain.w1, x) + self.brain.b1
-        a1 = np.tanh(z1)
-        z2 = np.dot(self.brain.w2, a1) + self.brain.b2
-        a2 = 1 / (1 + np.exp(-z2))  # Sigmoid
+        output, activations = self.brain.forward(inputs)
+        self.last_inputs = inputs
+        self.last_activations = activations
 
-        self.last_inputs = x
-        self.last_activations = [x, a1, a2]
-
-        if a2[0, 0] > 0.5 and self.jump_cooldown == 0:
+        if output[0, 0] > 0.5 and self.jump_cooldown == 0:
             self.jump()
             self.jump_cooldown = JUMP_COOLDOWN
 
