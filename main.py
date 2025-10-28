@@ -338,16 +338,21 @@ class Game:
 
         # Sort by fitness
         sorted_birds = sorted(self.birds, key=lambda b: b.score, reverse=True)
-        elite = sorted_birds[0]  # the GOAAAAT
-        save_best_bird(elite)
-        top_n = max(2, BIRD_COUNT // 5)  # 20%
+
+        # Keep the top 3
+        n_elites = min(3, len(sorted_birds))
+        elites = sorted_birds[:n_elites]
+        save_best_bird(elites[0])
+
+        # Pick top 20% of top as parents
+        top_n = max(2, BIRD_COUNT // 5)
         parents = sorted_birds[:top_n]
 
         new_birds = []
-        # Keep the elite
-        elite_child = Bird(100, WIN_HEIGHT // 2, COLOR_ELITE)
-        elite_child.brain = elite.brain.copy()
-        new_birds.append(elite_child)
+        for i, elite in enumerate(elites):
+            elite_child = Bird(100, WIN_HEIGHT // 2, COLOR_ELITE)
+            elite_child.brain = elite.brain.copy()
+            new_birds.append(elite_child)
 
         # Fill with children
         while len(new_birds) < BIRD_COUNT:
