@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 # ******** Constants ********
 FPS = 60
-WIN_WIDTH = 900  # 600 for the game, 300 for visualization
+WIN_WIDTH = 1000  # 600 for the game, 400 for visualization
 WIN_HEIGHT = 800
 GAME_WIDTH = 600
 
@@ -25,6 +25,9 @@ COLOR_PIPE = (0, 255, 0)
 COLOR_WHITE = (255, 255, 255)
 COLOR_ELITE = (0, 102, 204)
 COLOR_GRAY = (160, 160, 160)
+COLOR_NODE_ACTIVATION = (75, 75, 75)
+
+GRAPH_NODES_SIZE = 20
 
 BIRD_COUNT = 50
 MUTATION_RATE = 0.08
@@ -40,18 +43,6 @@ class NeuralNetwork:
         self.b1 = np.random.randn(hidden_size, 1)
         self.w2 = np.random.randn(output_size, hidden_size)
         self.b2 = np.random.randn(output_size, 1)
-
-    def predict(self, inputs):
-        # z1 = w1 * x + b1
-        # a1 = tanh(z1)
-        # z2 = w2 * a1 + b2
-        # output = sigmoid(z2)
-        x = np.array(inputs).reshape(-1, 1)
-        z1 = np.dot(self.w1, x) + self.b1
-        a1 = np.tanh(z1)
-        z2 = np.dot(self.w2, a1) + self.b2
-        output = 1 / (1 + np.exp(-z2))  # Sigmoid
-        return output[0, 0]
 
     def copy(self):
         nn = NeuralNetwork()
@@ -114,6 +105,50 @@ def load_bird(filename=SAVE_FILE):
     return bird
 
 
+def draw_network(win, nn, x_offset, y_offset, width=340, height=750, node_radius=GRAPH_NODES_SIZE, activations=None, active_threshold=0.3):
+    layer_sizes = [nn.w1.shape[1], nn.w1.shape[0], nn.w2.shape[0]]
+    n_layers = len(layer_sizes)
+    layer_x = [x_offset + int(i*width/(n_layers-1)) for i in range(n_layers)]
+
+    # Uses data from bird
+    if activations is None:
+        x = np.zeros((layer_sizes[0], 1))
+        a1 = np.tanh(np.dot(nn.w1, x)+nn.b1)
+        a2 = 1 / (1 + np.exp(- (np.dot(nn.w2, a1) + nn.b2)))
+        activations = [x, a1, a2]
+
+    # Draw connections in grey by weight intensity
+    for l in range(n_layers-1):
+        n_from = layer_sizes[l]
+        n_to = layer_sizes[l+1]
+        y_spacing_from = height // (n_from+1)
+        y_spacing_to = height // (n_to+1)
+        for i in range(n_from):
+            for j in range(n_to):
+                w = nn.w1[j, i] if l == 0 else nn.w2[j, i]
+                intensity = int(128 + w*80)
+                intensity = max(0, min(255, intensity))
+                color = (intensity, intensity, intensity)
+                start = (layer_x[l], y_offset+(i+1)*y_spacing_from)
+                end = (layer_x[l+1], y_offset+(j+1)*y_spacing_to)
+                pygame.draw.line(win, color, start, end, 2)
+
+    # Draw nodes
+    for l, layer in enumerate(activations):
+        n = layer.shape[0]
+        y_spacing = height // (n+1)
+        for i in range(n):
+            val = float(layer[i, 0])
+            if abs(val) > active_threshold:
+                color = COLOR_NODE_ACTIVATION
+            else:
+                color = COLOR_WHITE
+
+            pos = (layer_x[l], y_offset + (i + 1) * y_spacing)
+            pygame.draw.circle(win, color, pos, node_radius)
+            pygame.draw.circle(win, COLOR_WHITE, pos, node_radius, 2)
+
+
 # ******** Classes ********
 class Bird:
     def __init__(self, x, y, color=COLOR_GRAY):
@@ -127,6 +162,8 @@ class Bird:
         self.color = color
         self.score = 0
         self.brain = NeuralNetwork()
+        self.last_inputs = None
+        self.last_activations = None
 
     def jump(self):
         self.vel = JUMP_STRENGTH
@@ -154,8 +191,20 @@ class Bird:
                   center_gap_y,
                   (self.y - pipe.y) / WIN_HEIGHT]
 
-        output = self.brain.predict(inputs)
-        if output > 0.5 and self.jump_cooldown == 0:
+        # z1 = w1 * x + b1
+        # a1 = tanh(z1)
+        # z2 = w2 * a1 + b2
+        # a2 = sigmoid(z2)
+        x = np.array(inputs).reshape(-1, 1)
+        z1 = np.dot(self.brain.w1, x) + self.brain.b1
+        a1 = np.tanh(z1)
+        z2 = np.dot(self.brain.w2, a1) + self.brain.b2
+        a2 = 1 / (1 + np.exp(-z2))  # Sigmoid
+
+        self.last_inputs = x
+        self.last_activations = [x, a1, a2]
+
+        if a2[0, 0] > 0.5 and self.jump_cooldown == 0:
             self.jump()
             self.jump_cooldown = JUMP_COOLDOWN
 
@@ -228,7 +277,7 @@ class Game:
         alive_count = 0
         for bird in self.birds:
             if bird.alive:
-                bird.think(next_pipe)  # Todo change this
+                bird.think(next_pipe)
                 bird.update()
 
                 # Reward for being alive
@@ -263,6 +312,16 @@ class Game:
             if bird.alive:
                 bird.draw(self.screen)
 
+        # Visu panel
+        pygame.draw.rect(self.screen, (25, 25, 40),
+                         (GAME_WIDTH+PIPE_WIDTH, 0, WIN_WIDTH - GAME_WIDTH+PIPE_WIDTH, WIN_HEIGHT))
+        alive_birds = [b for b in self.birds if b.alive]
+        if alive_birds:
+            best_bird = max(alive_birds, key=lambda b: b.score)
+            draw_network(self.screen, best_bird.brain,
+                         GAME_WIDTH+PIPE_WIDTH+30, 50, width=300,
+                         activations=best_bird.last_activations)
+        # Score
         text_str = f"Score: {self.score}, Gen: {self.generation}"
         text = self.font.render(text_str, True, COLOR_WHITE)
         self.screen.blit(text, (10, 10))
