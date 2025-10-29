@@ -52,6 +52,9 @@ class NeuralNetwork:
         nn.b2 = np.copy(self.b2)
         return nn
 
+    def elu(self, x, alpha=1.0):
+        return np.where(x >= 0, x, alpha * (np.exp(x) - 1))
+
     def forward(self, inputs):
         # z1 = w1 * x + b1
         # a1 = tanh(z1)
@@ -59,7 +62,7 @@ class NeuralNetwork:
         # a2 = sigmoid(z2)
         x = np.array(inputs).reshape(-1, 1)
         z1 = np.dot(self.w1, x) + self.b1
-        a1 = np.tanh(z1)
+        a1 = self.elu(z1)  # a1 = np.tanh(z1)
         z2 = np.dot(self.w2, a1) + self.b2
         a2 = 1 / (1 + np.exp(-z2))  # Sigmoid
 
