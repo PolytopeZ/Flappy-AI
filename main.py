@@ -38,7 +38,7 @@ SAVE_FILE = "best_bird.npz"
 
 # ******** Neural Network ********
 class NeuralNetwork:
-    def __init__(self, input_size=5, hidden_size=6, output_size=1):
+    def __init__(self, input_size=7, hidden_size=10, output_size=1):
         self.w1 = np.random.randn(hidden_size, input_size)
         self.b1 = np.random.randn(hidden_size, 1)
         self.w2 = np.random.randn(output_size, hidden_size)
@@ -196,11 +196,14 @@ class Bird:
 
         center_gap_y = pipe.y / WIN_HEIGHT
 
-        inputs = [self.y / WIN_HEIGHT,
+        inputs = [self.y / WIN_HEIGHT,  # y position
+                  # x distance between bird pipe
                   (pipe.x - self.x) / GAME_WIDTH,
-                  self.vel / 10.0,
-                  center_gap_y,
-                  (self.y - pipe.y) / WIN_HEIGHT]
+                  self.vel / 10.0,  # speed
+                  pipe.top / WIN_HEIGHT,  # top of the pipe
+                  pipe.bottom / WIN_HEIGHT,  # bottom of the pipe
+                  center_gap_y,  # center of the pipe
+                  (self.y - pipe.y) / WIN_HEIGHT]  # diff y with pipe
 
         output, activations = self.brain.forward(inputs)
         self.last_inputs = inputs
@@ -220,6 +223,8 @@ class Pipe:
         self.width = PIPE_WIDTH
         self.gap = PIPE_GAP
         self.y = random.randint(200,  WIN_HEIGHT - 200)
+        self.top = self.y - self.gap // 2
+        self.bottom = self.y + self.gap // 2
 
     def update(self):
         self.x -= PIP_SPEED
