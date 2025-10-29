@@ -216,6 +216,16 @@ class Bird:
     def draw(self, win):
         pygame.draw.circle(win, self.color, (self.x, self.y), self.radius)
 
+    def draw_vision(self, win, pipe):
+        if pipe is None:
+            return
+
+        vision_color = (200, 200, 200)
+        bx, by = self.x, self.y
+        top_y, bottom_y = pipe.top, pipe.bottom
+        pygame.draw.line(win, vision_color, (bx, by), (pipe.x, top_y), 1)
+        pygame.draw.line(win, vision_color, (bx, by), (pipe.x, bottom_y), 1)
+
 
 class Pipe:
     def __init__(self, x):
@@ -328,6 +338,16 @@ class Game:
             draw_network(self.screen, best_bird.brain,
                          GAME_WIDTH+PIPE_WIDTH+30, 50, width=300,
                          activations=best_bird.last_activations)
+
+        if best_bird:
+            next_pipe = None
+            for pipe in self.pipes:
+                if pipe.x + pipe.width > best_bird.x:
+                    next_pipe = pipe
+                    break
+            if next_pipe:
+                best_bird.draw_vision(self.screen, next_pipe)
+
         # Score
         text_str = f"Score: {self.score}, Gen: {self.generation}"
         text = self.font.render(text_str, True, COLOR_WHITE)
