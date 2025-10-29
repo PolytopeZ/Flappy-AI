@@ -194,16 +194,27 @@ class Bird:
         if pipe is None:
             return
 
-        center_gap_y = pipe.y / WIN_HEIGHT
+        top = pipe.y - pipe.gap/2
+        bottom = pipe.y + pipe.gap/2
 
-        inputs = [self.y / WIN_HEIGHT,  # y position
-                  # x distance between bird pipe
-                  (pipe.x - self.x) / GAME_WIDTH,
-                  self.vel / 10.0,  # speed
-                  pipe.top / WIN_HEIGHT,  # top of the pipe
-                  pipe.bottom / WIN_HEIGHT,  # bottom of the pipe
-                  center_gap_y,  # center of the pipe
-                  (self.y - pipe.y) / WIN_HEIGHT]  # diff y with pipe
+        # Norm to [-1, 1]
+        norm_y = (self.y / WIN_HEIGHT) * 2 - 1
+        norm_x_dist = ((pipe.x - self.x) / GAME_WIDTH) * 2 - 1
+        norm_vel = self.vel / 10.0
+        norm_center = (pipe.y / WIN_HEIGHT) * 2 - 1
+        norm_delta_y = (self.y - pipe.y) / WIN_HEIGHT
+        norm_top = (top / WIN_HEIGHT) * 2 - 1
+        norm_bottom = (bottom / WIN_HEIGHT) * 2 - 1
+
+        inputs = [
+            norm_y,
+            norm_x_dist,
+            norm_vel,
+            norm_center,
+            norm_delta_y,
+            norm_top,
+            norm_bottom
+        ]
 
         output, activations = self.brain.forward(inputs)
         self.last_inputs = inputs
