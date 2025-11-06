@@ -34,6 +34,7 @@ MUTATION_RATE = 0.08
 CROSSOVER_RATE = 0.7
 
 SAVE_FILE = "best_bird.npz"
+LOAD_FILE = "best_bird_load.npz"
 
 
 # ******** Neural Network ********
@@ -108,7 +109,7 @@ def save_best_bird(bird):
     print("Goat has been saved")
 
 
-def load_bird(filename=SAVE_FILE):
+def load_bird(filename=LOAD_FILE):
     data = np.load(filename)
 
     bird = Bird(100, WIN_HEIGHT // 2)
@@ -283,7 +284,7 @@ class Game:
         self.history_max = []
         self.history_mean = []
 
-        if load_best and os.path.exists(SAVE_FILE):
+        if load_best and os.path.exists(LOAD_FILE):
             bird = load_bird()
             self.birds = [bird]
             self.pipes = [Pipe(GAME_WIDTH + i * 300) for i in range(3)]
@@ -346,6 +347,7 @@ class Game:
         # Visu panel
         pygame.draw.rect(self.screen, (25, 25, 40),
                          (GAME_WIDTH+PIPE_WIDTH, 0, WIN_WIDTH - GAME_WIDTH+PIPE_WIDTH, WIN_HEIGHT))
+        best_bird = None
         alive_birds = [b for b in self.birds if b.alive]
         if alive_birds:
             best_bird = max(alive_birds, key=lambda b: b.score)
@@ -353,7 +355,7 @@ class Game:
                          GAME_WIDTH+PIPE_WIDTH+30, 50, width=300,
                          activations=best_bird.last_activations)
 
-        if best_bird:
+        if best_bird is not None:
             next_pipe = None
             for pipe in self.pipes:
                 if pipe.x + pipe.width > best_bird.x:
